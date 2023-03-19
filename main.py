@@ -1,4 +1,5 @@
 import sys
+import darkdetect
 from typing import Tuple
 from PyQt6 import uic
 from PyQt6.QtWidgets import QMainWindow, QApplication
@@ -26,7 +27,7 @@ class MainWindow(QMainWindow):
             sys.exit()
 
         uic.loadUi("res/ui/main_window.ui", self)
-        self.load_tabs()
+        self.setup_tabs()
         self.show()
 
         # TODO: UI of console tab
@@ -74,14 +75,17 @@ class MainWindow(QMainWindow):
         secure_tokens[str(pc_id)] = secure_token
         store_keeper.add_value("secure_token", secure_tokens)
 
-    def load_tabs(self) -> None:
+    def setup_tabs(self) -> None:
         self.tab_1 = FileSystemWidget(self.client)
         self.tabWidget.addTab(self.tab_1, "File System")
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    apply_stylesheet(app, theme="light_red_500.xml")
+    if darkdetect.isLight():
+        apply_stylesheet(app, theme="light_red_500.xml")
+    else:
+        apply_stylesheet(app, theme="dark_lightgreen.xml")
 
     window = MainWindow()
     sys.exit(app.exec())

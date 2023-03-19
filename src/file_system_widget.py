@@ -20,8 +20,9 @@ class FileSystemWidget(QWidget):
         self.load_tree_widget()
         self.treeWidget.itemDoubleClicked.connect(self.open_dir)
         self.treeWidget.itemSelectionChanged.connect(self.selection_processing)
-        self.download.clicked.connect(self.download_processing)
-        self.upload.clicked.connect(self.upload_processing)
+        self.downloadBtn.clicked.connect(self.download_processing)
+        self.uploadBtn.clicked.connect(self.upload_processing)
+        self.deleteBtn.clicked.connect(self.delete_processing)
 
     def load_tree_widget(self) -> None:
         if str(self.current_path) == '.':
@@ -70,23 +71,27 @@ class FileSystemWidget(QWidget):
         return Path(path)
 
     def open_dir(self, item: QTreeWidgetItem, column: int) -> None:
-        if not self._is_dir(item):
+        if not self._is_dir(item) or item.childCount() > 0:
             return
         self.current_path = self._get_item_path(item)
         self.load_tree_widget()
-        self.treeWidget.expandItem(item)
+        self.treeWidget.expandItem(item.parent())
+        item.setSelected(False)
 
     def selection_processing(self) -> None:
         count = len(self.treeWidget.selectedItems())
         if count == 0:
-            self.download.setEnabled(False)
-            self.upload.setEnabled(True)
+            self.downloadBtn.setEnabled(False)
+            self.uploadBtn.setEnabled(True)
+            self.deleteBtn.setEnabled(False)
         elif count == 1:
-            self.download.setEnabled(True)
-            self.upload.setEnabled(True)
+            self.downloadBtn.setEnabled(True)
+            self.uploadBtn.setEnabled(True)
+            self.deleteBtn.setEnabled(True)
         else:
-            self.download.setEnabled(True)
-            self.upload.setEnabled(False)
+            self.downloadBtn.setEnabled(True)
+            self.uploadBtn.setEnabled(False)
+            self.deleteBtn.setEnabled(True)
 
     def download_processing(self) -> None:
         items = self.treeWidget.selectedItems()
@@ -105,4 +110,17 @@ class FileSystemWidget(QWidget):
             for path in paths[0]:
                 self.client.send_file(Path(path), destination)
         except ServerError | PathNotFoundError:
+            return
+
+    def delete_processing(self) -> None:
+        items = self.treeWidget.selectedItems()
+        try:
+            for item in items:
+                path = self._get_item_path(item)
+                if self._is_dir(item):
+                    self.client.cmd_command(f"rmdir /s {path}")
+                else:
+                    self.client.cmd_command(f"del /f {path}")
+                (item.parent() or self.root).removeChild(item)
+        except ServerError:
             return
