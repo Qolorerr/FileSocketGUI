@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 from PyQt6 import uic
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QTreeWidgetItem, QFileDialog
 from filesocket import ManagingClient, ServerError, PathNotFoundError
 
@@ -13,13 +14,17 @@ class FileSystemWidget(QWidget):
 
         self.root = self.treeWidget.invisibleRootItem()
         self.client = client
+        self.item_old_name = ""
 
         self.selection_processing()
         self.load_tree_widget(self.root)
         self.treeWidget.itemDoubleClicked.connect(self.open_dir)
         self.treeWidget.itemSelectionChanged.connect(self.selection_processing)
+        self.treeWidget.itemChanged.connect(self.rename_processing_back)
+
         self.downloadBtn.clicked.connect(self.download_processing)
         self.uploadBtn.clicked.connect(self.upload_processing)
+        self.renameBtn.clicked.connect(self.rename_processing_front)
         self.deleteBtn.clicked.connect(self.delete_processing)
 
     def load_tree_widget(self, parent: QTreeWidgetItem) -> None:
@@ -75,14 +80,17 @@ class FileSystemWidget(QWidget):
         if count == 0:
             self.downloadBtn.setEnabled(False)
             self.uploadBtn.setEnabled(True)
+            self.renameBtn.setEnabled(False)
             self.deleteBtn.setEnabled(False)
         elif count == 1:
             self.downloadBtn.setEnabled(True)
             self.uploadBtn.setEnabled(True)
+            self.renameBtn.setEnabled(True)
             self.deleteBtn.setEnabled(True)
         else:
             self.downloadBtn.setEnabled(True)
             self.uploadBtn.setEnabled(False)
+            self.renameBtn.setEnabled(False)
             self.deleteBtn.setEnabled(True)
 
     def download_processing(self) -> None:
@@ -103,6 +111,25 @@ class FileSystemWidget(QWidget):
                 self.client.send_file(Path(path), destination)
         except ServerError | PathNotFoundError:
             return
+
+    def rename_processing_front(self) -> None:
+        item = self.treeWidget.selectedItems()[0]
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+        self.item_old_name = item.text(0)
+        self.treeWidget.editItem(item, 0)
+
+    def rename_processing_back(self, item: QTreeWidgetItem, column: int) -> None:
+        if column != 0 or self.item_old_name == "" or item.parent() is None:
+            self.item_old_name = ""
+            return
+        item_new_name = item.text(0)
+        parent_path = self._get_item_path(item.parent())
+        try:
+            self.client.cmd_command(f"ren {parent_path / self.item_old_name} {item_new_name}")
+        except ServerError:
+            pass
+        self.item_old_name = ""
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
     def delete_processing(self) -> None:
         items = self.treeWidget.selectedItems()
