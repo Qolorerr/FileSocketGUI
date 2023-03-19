@@ -1,3 +1,4 @@
+import sys
 from typing import Tuple
 
 from PyQt6 import uic
@@ -18,12 +19,14 @@ class ChoosePCDialog(QDialog):
         temp_client.run(False)
         try:
             return temp_client.check_online()
-        except ServerError as e:
-            print(e)
+        except ServerError:
             return False
 
     def load_table(self) -> None:
-        all_pc = show_all_pc()
+        try:
+            all_pc = show_all_pc()
+        except ServerError:
+            sys.exit()
         availability = tuple(map(self._check_online, all_pc))
         all_pc = list(zip(all_pc, availability))
         all_pc.sort(key=lambda pc: pc[1], reverse=True)
