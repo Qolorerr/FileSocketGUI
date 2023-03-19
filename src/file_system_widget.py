@@ -153,6 +153,7 @@ class FileSystemWidget(QWidget):
         self.item_old_name = ""
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
+    # Display confirmation window on delete
     def _confirm_delete(self, files: Tuple[str]) -> bool:
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)

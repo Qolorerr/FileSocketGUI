@@ -8,6 +8,7 @@ from filesocket import CONFIG_FILE, LOGGER_CONFIG, ManagingClient, ServerError
 from filesocket.storekeeper import Storekeeper
 
 from src.choose_pc_dialog import ChoosePCDialog
+from src.console_widget import ConsoleWidget
 from src.file_system_widget import FileSystemWidget
 from src.signin_dialog import SigninDialog
 
@@ -76,8 +77,10 @@ class MainWindow(QMainWindow):
         store_keeper.add_value("secure_token", secure_tokens)
 
     def setup_tabs(self) -> None:
-        self.tab_1 = FileSystemWidget(self.client)
-        self.tabWidget.addTab(self.tab_1, "File System")
+        tab_1 = FileSystemWidget(self.client)
+        self.tabWidget.addTab(tab_1, "File System")
+        tab_2 = ConsoleWidget(self.client)
+        self.tabWidget.addTab(tab_2, "Console")
 
 
 if __name__ == "__main__":
