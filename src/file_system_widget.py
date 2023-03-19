@@ -11,21 +11,19 @@ class FileSystemWidget(QWidget):
         super().__init__()
         uic.loadUi("res/ui/file_system_widget.ui", self)
 
-        self.current_path = Path("")
-        self.tree_widget_items = dict()
         self.root = self.treeWidget.invisibleRootItem()
         self.client = client
 
         self.selection_processing()
-        self.load_tree_widget()
+        self.load_tree_widget(self.root)
         self.treeWidget.itemDoubleClicked.connect(self.open_dir)
         self.treeWidget.itemSelectionChanged.connect(self.selection_processing)
         self.downloadBtn.clicked.connect(self.download_processing)
         self.uploadBtn.clicked.connect(self.upload_processing)
         self.deleteBtn.clicked.connect(self.delete_processing)
 
-    def load_tree_widget(self) -> None:
-        if str(self.current_path) == '.':
+    def load_tree_widget(self, parent: QTreeWidgetItem) -> None:
+        if parent == self.root:
             try:
                 disks = self.client.cmd_command("wmic logicaldisk get name")['out'].split(':')
             except ServerError:
@@ -35,26 +33,21 @@ class FileSystemWidget(QWidget):
             files_to_show = []
         else:
             try:
-                file_list = self.client.list_files(self.current_path)
+                file_list = self.client.list_files(self._get_item_path(parent))
             except ServerError:
                 sys.exit()
             if file_list is None:
                 return
             dirs_to_show = file_list['dirs']
             files_to_show = file_list['files']
-        self.import_data(dirs_to_show, files_to_show)
+        self.import_data(parent, dirs_to_show, files_to_show)
 
-    def import_data(self, dirs_to_show: list, files_to_show: list) -> None:
-        if str(self.current_path) in self.tree_widget_items:
-            parent = self.tree_widget_items[str(self.current_path)]
-        else:
-            parent = self.root
+    @staticmethod
+    def import_data(parent: QTreeWidgetItem, dirs_to_show: list, files_to_show: list) -> None:
         for directory in dirs_to_show:
             directory_node = QTreeWidgetItem(parent, (directory, "", "directory", ""))
-            self.tree_widget_items[str(self.current_path / directory)] = directory_node
         for file in files_to_show:
             file_node = QTreeWidgetItem(parent, (file, "", Path(file).suffix[1:], ""))
-            self.tree_widget_items[str(self.current_path / file)] = file_node
 
     @staticmethod
     def _is_dir(item: QTreeWidgetItem) -> bool:
@@ -73,8 +66,7 @@ class FileSystemWidget(QWidget):
     def open_dir(self, item: QTreeWidgetItem, column: int) -> None:
         if not self._is_dir(item) or item.childCount() > 0:
             return
-        self.current_path = self._get_item_path(item)
-        self.load_tree_widget()
+        self.load_tree_widget(item)
         self.treeWidget.expandItem(item.parent())
         item.setSelected(False)
 
