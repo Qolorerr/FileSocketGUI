@@ -1,6 +1,7 @@
 import sys
+from datetime import datetime
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, List, Dict
 
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
@@ -36,7 +37,7 @@ class FileSystemWidget(QWidget):
             except ServerError:
                 sys.exit()
             disks = list(map(lambda s: s.split('\n')[-1], disks[:-1]))
-            dirs_to_show = list(map(lambda disk: f"{disk}:/", disks))
+            dirs_to_show = list(map(lambda disk: {"name": f"{disk}:/", "modification_time": None}, disks))
             files_to_show = []
         else:
             try:
@@ -51,11 +52,21 @@ class FileSystemWidget(QWidget):
 
     # Create new items
     @staticmethod
-    def import_data(parent: QTreeWidgetItem, dirs_to_show: list, files_to_show: list) -> None:
+    def import_data(parent: QTreeWidgetItem,
+                    dirs_to_show: List[Dict[str, str | int]],
+                    files_to_show: List[Dict[str, str | int]]) -> None:
         for directory in dirs_to_show:
-            directory_node = QTreeWidgetItem(parent, (directory, "", "directory", ""))
+            if directory['modification_time'] is not None:
+                date = datetime.fromtimestamp(directory['modification_time']).strftime("%d.%m.%Y %H:%M")
+            else:
+                date = ""
+            directory_node = QTreeWidgetItem(parent, (directory['name'], date, "directory", ""))
         for file in files_to_show:
-            file_node = QTreeWidgetItem(parent, (file, "", Path(file).suffix[1:], ""))
+            date = datetime.fromtimestamp(file['modification_time']).strftime("%d.%m.%Y %H:%M")
+            size = str(file['size'] // (2 ** 10))
+            size = ' '.join([size[max(i-3, 0):i] for i in range(len(size), 0, -3)][::-1])
+            # TODO: Fix default sort by size
+            file_node = QTreeWidgetItem(parent, (file['name'], date, Path(file['name']).suffix[1:], f"{size} KB"))
 
     # Check is directory
     @staticmethod
