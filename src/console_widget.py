@@ -4,8 +4,8 @@ from filesocket import ManagingClient, ServerError
 
 
 class ConsoleWidget(QWidget):
-    def __init__(self, client: ManagingClient):
-        super().__init__()
+    def __init__(self, parent: QWidget, client: ManagingClient):
+        super().__init__(parent)
         uic.loadUi("res/ui/console_widget.ui", self)
 
         self.client = client

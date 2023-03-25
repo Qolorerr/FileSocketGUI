@@ -22,6 +22,12 @@
      <height>501</height>
     </rect>
    </property>
+   <property name="dragEnabled">
+    <bool>true</bool>
+   </property>
+   <property name="dragDropMode">
+    <enum>QAbstractItemView::DragOnly</enum>
+   </property>
    <property name="selectionMode">
     <enum>QAbstractItemView::MultiSelection</enum>
    </property>

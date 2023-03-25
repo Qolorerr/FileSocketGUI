@@ -1,11 +1,11 @@
 from PyQt6 import uic
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import QDialog, QWidget
 from filesocket import sign_up, ServerError
 
 
 class SignupDialog(QDialog):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
         uic.loadUi("res/ui/signup_dialog.ui", self)
         self.error_message.hide()
         self.signup.clicked.connect(self.signup_processing)

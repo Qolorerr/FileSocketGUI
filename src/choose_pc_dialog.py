@@ -2,13 +2,13 @@ import sys
 from typing import Tuple
 
 from PyQt6 import uic
-from PyQt6.QtWidgets import QDialog, QPushButton, QListWidgetItem
+from PyQt6.QtWidgets import QDialog, QPushButton, QListWidgetItem, QWidget
 from filesocket import show_all_pc, ManagingClient, ServerError, PCEntity
 
 
 class ChoosePCDialog(QDialog):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
         uic.loadUi("res/ui/choose_pc_dialog.ui", self)
         self.device_id = None
         self.load_table()
