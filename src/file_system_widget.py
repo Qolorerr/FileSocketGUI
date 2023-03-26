@@ -8,7 +8,9 @@ from PyQt6.QtCore import Qt, QRect
 from PyQt6.QtWidgets import QWidget, QTreeWidgetItem, QFileDialog, QMessageBox, QAbstractItemView
 from filesocket import ManagingClient, ServerError, PathNotFoundError
 
+from src.threads import DownloadThread, UploadThread, CMDThread
 from src.dragndrop_tree_widget import DragNDropTreeWidget
+from src.taskbar_processor import TaskbarProcessor
 
 
 class FileSystemWidget(QWidget):
@@ -36,13 +38,15 @@ class FileSystemWidget(QWidget):
         self.renameBtn.clicked.connect(self.rename_processing_front)
         self.deleteBtn.clicked.connect(self.delete_processing)
 
+        self.taskbar_processor = TaskbarProcessor(self, self.progressBar, self.progressBarText)
+
     def _drag_processing(self, item: QTreeWidgetItem, temp_dir: Path) -> Path | None:
         # TODO: fix "File saving error (OSError(22, 'Invalid argument'),)"
         try:
             path = self._get_item_path(item)
             filename = path.name
             local_path = temp_dir / filename
-            self.client.get_file(path, temp_dir)
+            self.taskbar_processor.add_thread(DownloadThread(self, self.client, path, temp_dir))
         except ServerError as e:
             self.logger.info(f"Server error {e.args}")
             return None
@@ -64,7 +68,7 @@ class FileSystemWidget(QWidget):
                 item_dir = item_to.parent()
             destination = self._get_item_path(item_dir)
         try:
-            self.client.send_file(path_from, destination)
+            self.taskbar_processor.add_thread(UploadThread(self, self.client, path_from, destination))
             if item_to is not None:
                 self.open_dir(item_dir, 0)
         except ServerError as e:
@@ -185,11 +189,12 @@ class FileSystemWidget(QWidget):
     # Download item
     def download_processing(self) -> None:
         items = self.treeWidget.selectedItems()
+        self.treeWidget.clearSelection()
         try:
             for item in items:
                 path = self._get_item_path(item)
-                self.client.get_file(path)
-            self.logger.info(f"Downloaded {len(items)} files")
+                self.taskbar_processor.add_thread(DownloadThread(self, self.client, path))
+            self.logger.info(f"Downloading {len(items)} files")
         except ServerError as e:
             self.logger.info(f"Server error {e.args}")
         except PathNotFoundError:
@@ -202,9 +207,10 @@ class FileSystemWidget(QWidget):
         items = self.treeWidget.selectedItems()
         destination = Path("") if len(items) == 0 else self._get_item_path(items[0])
         paths = QFileDialog.getOpenFileNames(self, "Choose file to send", "")
+        self.treeWidget.clearSelection()
         try:
             for path in paths[0]:
-                self.client.send_file(Path(path), destination)
+                self.taskbar_processor.add_thread(UploadThread(self, self.client, Path(path), destination))
             self.logger.info(f"Uploaded {len(paths[0])} files")
         except ServerError as e:
             self.logger.info(f"Server error {e.args}")
@@ -217,6 +223,7 @@ class FileSystemWidget(QWidget):
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
         self.item_old_name = item.text(0)
         self.treeWidget.editItem(item, 0)
+        self.treeWidget.clearSelection()
 
     # Rename on PC
     def rename_processing_back(self, item: QTreeWidgetItem, column: int) -> None:
@@ -258,9 +265,9 @@ class FileSystemWidget(QWidget):
             for item in items:
                 path = self._get_item_path(item)
                 if self._is_dir(item):
-                    self.client.cmd_command(f'rmdir /s "{path}"')
+                    self.taskbar_processor.add_thread(CMDThread(self, self.client, f'rmdir /s "{path}"'))
                 else:
-                    self.client.cmd_command(f'del /f "{path}"')
+                    self.taskbar_processor.add_thread(CMDThread(self, self.client, f'del /f "{path}"'))
                 (item.parent() or self.root).removeChild(item)
         except ServerError as e:
             self.logger.info(f"Server error {e.args}")

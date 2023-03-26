@@ -17,7 +17,7 @@ from src.signin_dialog import SigninDialog
 
 
 LOGGER_CONFIG['loggers']['gui'] = {
-            "level": "DEBUG",
+            "level": "INFO",
             "handlers": [
                 "verbose_output",
             ],
