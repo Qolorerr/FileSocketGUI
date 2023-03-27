@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Tuple, List, Dict
 
 from PyQt6 import uic
-from PyQt6.QtCore import Qt, QRect
-from PyQt6.QtWidgets import QWidget, QTreeWidgetItem, QFileDialog, QMessageBox, QAbstractItemView
+from PyQt6.QtCore import Qt, QRect, QPoint
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QWidget, QTreeWidgetItem, QFileDialog, QMessageBox, QAbstractItemView, QMenu
 from filesocket import ManagingClient, ServerError, PathNotFoundError
 
 from src.threads import DownloadThread, UploadThread, CMDThread
@@ -93,6 +94,30 @@ class FileSystemWidget(QWidget):
         __qtreewidgetitem.setText(1, "Date modified")
         __qtreewidgetitem.setText(2, "Type")
         __qtreewidgetitem.setText(3, "Size")
+        self.treeWidget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.treeWidget.customContextMenuRequested.connect(self.open_context_menu)
+
+    # Context menu
+    def open_context_menu(self, position: QPoint) -> None:
+        self.logger.debug(f"{type(position)}: {position}")
+        menu = QMenu(self)
+        if self.downloadBtn.isEnabled():
+            download_action = QAction("Download", menu)
+            download_action.triggered.connect(self.download_processing)
+            menu.addAction(download_action)
+        if self.uploadBtn.isEnabled():
+            download_action = QAction("Upload here", menu)
+            download_action.triggered.connect(self.upload_processing)
+            menu.addAction(download_action)
+        if self.renameBtn.isEnabled():
+            download_action = QAction("Rename", menu)
+            download_action.triggered.connect(self.rename_processing_front)
+            menu.addAction(download_action)
+        if self.deleteBtn.isEnabled():
+            download_action = QAction("Delete", menu)
+            download_action.triggered.connect(self.delete_processing)
+            menu.addAction(download_action)
+        menu.exec(self.treeWidget.mapToGlobal(position))
 
     # Expand directory
     def load_tree_widget(self, parent: QTreeWidgetItem) -> None:
